@@ -1,0 +1,28 @@
+# rpa
+pywin32
+pywinauto
+PyAutoGUI
+urllib3
+psutil
+keyboard
+mouse
+selenium
+pandas
+openpyxl
+xlrd
+xlwt
+Pillow
+requests
+bs4
+lxml
+
+# builder
+pyinstaller
+pyinstaller-versionfile
+PyYAML
+
+# se
+Flask
+Flask-SocketIO
+gevent-websocket
+
