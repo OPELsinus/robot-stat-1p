@@ -226,3 +226,62 @@ class Web:
             if int((datetime.now() - start_time).seconds) > timeout:
                 return None
             sleep(1)
+
+    def refresh(self):
+        self.driver.refresh()
+
+    def get_element_display(self, xpath):
+        return self.driver.find_element('xpath', xpath).value_of_css_property('display')
+
+    def execute_script(self, xpath, element_type='innerHTML', value=None):
+
+        if element_type == 'innerHTML':
+            self.driver.execute_script(f"""
+                var xpathExpression = "{xpath}";
+
+                var matchingElements = document.evaluate(xpathExpression, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+                for (let i = 0; i < matchingElements.snapshotLength; i++) {{
+                  var targetElement = matchingElements.snapshotItem(i);
+
+                  targetElement.innerHTML = "{value}";
+                }}
+            """)
+        elif element_type == 'value':
+            self.driver.execute_script(f"""
+                    var xpathExpression = "{xpath}";
+
+                    var matchingElements = document.evaluate(xpathExpression, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+                    for (let i = 0; i < matchingElements.snapshotLength; i++) {{
+                      var targetElement = matchingElements.snapshotItem(i);
+
+                      targetElement.value = "{value}";
+                    }}
+                """)
+
+    def execute_script_click_js(self, js_path):
+        try:
+            self.driver.execute_script(f"""
+                var button = document.querySelector('{js_path}');
+                if (button) {{
+                    button.click();
+                }}
+            """)
+        except:
+            sleep(10)
+
+    def execute_script_click_xpath(self, xpath):
+        try:
+            self.driver.execute_script(f"""
+                var xpathExpression = "{xpath}";
+                var result = document.evaluate(xpathExpression, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                var element = result.singleNodeValue;
+
+                // Trigger the click event on the element
+                if (element) {{
+                  element.click();
+                }}
+            """)
+        except:
+            sleep(10)

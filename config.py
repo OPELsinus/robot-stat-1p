@@ -1,3 +1,4 @@
+import socket
 import sys
 from pathlib import Path
 
@@ -63,10 +64,27 @@ postgre_ip = global_env_data['postgre_ip']
 postgre_port = global_env_data['postgre_port']
 
 # ? PROJECT
-project_name = 'REPLACE ME'  # ! FIXME
-chat_id = ''  # ! FIXME
+robot_name = 'robot-stat-1p'  # ! FIXME
+config_path = local_path.joinpath(f'.agent\\{robot_name}\\config.json')
+config_data = json_read(config_path)
+chat_id = config_data['chat_id']
 
-project_path = global_path.joinpath(f'.agent').joinpath(project_name).joinpath(get_hostname())
+ecp_paths = r'\\vault.magnum.local\common\Stuff\_06_Бухгалтерия\! Актуальные ЭЦП'
+
+ip_address = socket.gethostbyname(socket.gethostname())
+
+saving_path = global_path.joinpath(f".agent\\{robot_name}\\Output")
+saving_path.mkdir(exist_ok=True, parents=True)
+
+download_path = Path.home().joinpath('downloads')
+db_host = global_env_data['postgre_ip']
+
+db_port = global_env_data['postgre_port']
+db_name = global_env_data['postgre_db_name']
+db_schema = 'robot'
+db_user = global_env_data['postgre_db_username']
+db_pass = global_env_data['postgre_db_password']
+project_path = global_path.joinpath(f'.agent').joinpath(robot_name).joinpath(get_hostname())
 project_path.mkdir(exist_ok=True, parents=True)
 config_path = project_path.joinpath('config.json')
 
