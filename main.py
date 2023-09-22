@@ -479,6 +479,16 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             print('Clicking1')
             # web.execute_script_click_js("body > div:nth-child(18) > div.ui-dialog-buttonpane.ui-widget-content.ui-helper-clearfix > div > button:nth-child(1)")
             web.execute_script_click_xpath('/html/body/div[17]/div[11]/div/button[1]/span')
+
+            # ? First page
+
+            web.wait_element("//a[contains(text(), 'Страница 1')]", timeout=10)
+            web.find_element("//a[contains(text(), 'Страница 1')]").click()
+
+            for i in range(len(first)):
+                web.find_element(f'//*[@id="{i + 3}"]/td[2]').click()
+
+            # ? Second page
             web.wait_element("//a[contains(text(), 'Страница 2')]", timeout=10)
             web.find_element("//a[contains(text(), 'Страница 2')]").click()
 
@@ -504,7 +514,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                         web.wait_element(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][{ind + 4}]//input")
                         web.find_element(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][{ind + 4}]//input").type_keys(second.get(cur_key)[ind], delay=1)
 
-            # ? Second page
+            # ? Last page
             web.find_element("//a[contains(text(), 'Данные исполнителя')]").click()
             web.execute_script(element_type="value", xpath="//*[@id='inpelem_1_0']", value='Қалдыбек Б.Ғ.')
             web.execute_script(element_type="value", xpath="//*[@id='inpelem_1_1']", value='87073332438')
@@ -573,6 +583,8 @@ def get_second_page():
 
     data_from_second_page = dict()
 
+    data_from_second_page.update({'Всего': round(sheet['E49'].value)})
+
     for i in range(6, 49):
         row = []
         if sheet[f'A{i}'].value is not None:
@@ -600,10 +612,23 @@ if __name__ == '__main__':
     first = get_first_page()
     second = get_second_page()
     # print(second.keys(), second.get(list(second.keys())[0]))
-    for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
-        if '~' not in branch:
-            branch_ = branch.replace('_dwh.xlsx', '')
-            start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
+    print(first)
+    print(second)
+
+    # for key, i in second.items():
+    #     print(key, sum(i))
+
+    dict1 = first.copy()
+    dict2 = second.copy()
+
+    # Print the updated dictionaries
+    print("Updated dict1:", dict1)
+    print("Updated dict2:", dict2)
+
+    # for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
+    #     if '~' not in branch:
+    #         branch_ = branch.replace('_dwh.xlsx', '')
+    #         start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
 
 
 
