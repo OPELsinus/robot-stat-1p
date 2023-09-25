@@ -485,41 +485,65 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             web.wait_element("//a[contains(text(), 'Страница 1')]", timeout=10)
             web.find_element("//a[contains(text(), 'Страница 1')]").click()
 
-            for i in range(len(first)):
-                web.find_element(f'//*[@id="{i + 3}"]/td[2]').click()
+            id_ = 3
+            for ind, key in enumerate(first.keys()):
+                if key == 'Всего':
+                    continue
+                if first.get(key) > 0:
+                    print(key, first.get(key))
+                    print(f'//*[@id="{id_}"]/td[3]', f'//*[@id="{id_}_col_1"]')
+                    web.find_element(f'//*[@id="3"]/td[2]').click()
+                    web.find_element(f'//*[@id="{id_}_col_1"]').type_keys(str(key))
+                    sleep(0.5)
+                    keyboard.send_keys('{ENTER}')
 
+                    # web.find_element(f'//*[@id="{ind + 1}"]/td[3]').click()
+                    web.find_element(f'//*[@id="{id_}_col_2"]').type_keys(str(first.get(key)))
+
+                    id_ += 1
+
+            keyboard.send_keys('{TAB}')
             # ? Second page
             web.wait_element("//a[contains(text(), 'Страница 2')]", timeout=10)
             web.find_element("//a[contains(text(), 'Страница 2')]").click()
 
             web.find_element('//*[@id="rtime"]').select('2')
             sleep(1)
+            print('-----')
 
+            id_ = 3
             for i in range(len(second)):
 
                 cur_key = list(second.keys())[i]
-                web.find_element(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][2]").click()
-                web.wait_element(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][2]//input")
-                web.find_element(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][2]//input").type_keys(cur_key, delay=1)
+
+                if cur_key == 'Всего':
+                    continue
+
+                web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]").click()
+                web.wait_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]//input")
+                web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]//input").type_keys(cur_key, delay=1)
                 sleep(1)
                 keyboard.send_keys('{ENTER}')
                 print(cur_key)
 
                 for ind, val in enumerate(second.get(cur_key)):
 
-                    if second.get(cur_key)[ind] != 0:
-                        web.find_element(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][{ind + 4}]").click(double=True)
+                    if ind < 2:
+                        web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]").click(double=True)
                         print(second.get(cur_key)[ind])
-                        print(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][{ind + 4}]//input")
-                        web.wait_element(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][{ind + 4}]//input")
-                        web.find_element(f"//table[@id='tb_p1_e0']//tr[{i + 3}]/td[@role='gridcell'][{ind + 4}]//input").type_keys(second.get(cur_key)[ind], delay=1)
+                        print(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input")
+                        web.wait_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input")
+                        web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input").type_keys(second.get(cur_key)[ind], delay=1)
 
+                id_ += 1
+
+            keyboard.send_keys('{TAB}')
             # ? Last page
             web.find_element("//a[contains(text(), 'Данные исполнителя')]").click()
-            web.execute_script(element_type="value", xpath="//*[@id='inpelem_1_0']", value='Қалдыбек Б.Ғ.')
-            web.execute_script(element_type="value", xpath="//*[@id='inpelem_1_1']", value='87073332438')
-            web.execute_script(element_type="value", xpath="//*[@id='inpelem_1_2']", value='87073332438')
-            web.execute_script(element_type="value", xpath="//*[@id='inpelem_1_3']", value='KALDYBEK.B@magnum.kz')
+            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_0']", value='Нарымбаева Алия')
+            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_1']", value='87717041897')
+            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_2']", value='87717041897')
+            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_3']", value='Narymbayeva@magnum.kz')
             sleep(1000)
 
             # save_and_send(web, save=True)
@@ -554,7 +578,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
 
 def get_first_page():
 
-    book = load_workbook(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата\Торговый зал АФ №40_dwh.xlsx', data_only=True)
+    book = load_workbook(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата\Торговый зал АФ №10_dwh.xlsx', data_only=True)
 
     sheet = book['Стр 2-3']
 
@@ -565,10 +589,16 @@ def get_first_page():
     data_from_first_page.update({'10120': round(sheet['C15'].value) + round(sheet['C16'].value)})
     for i in range(17, 24):
         try:
-            data_from_first_page.update({str(sheet[f'B{i}'].value)[:4] + '0': round(sheet[f'C{i}'].value)})
+            if str(sheet[f'B{i}'].value)[:4] == '1089':
+                data_from_first_page.update({str(sheet[f'B{i}'].value)[:4] + '1': round(sheet[f'C{i}'].value)})
+            else:
+                data_from_first_page.update({str(sheet[f'B{i}'].value)[:4] + '0': round(sheet[f'C{i}'].value)})
             # print(int(sheet[f'C{i}'].value))
         except:
-            data_from_first_page.update({str(sheet[f'B{i}'].value)[:4] + '0': 0})
+            if str(sheet[f'B{i}'].value)[:4] == '1089':
+                data_from_first_page.update({str(sheet[f'B{i}'].value)[:4] + '1': 0})
+            else:
+                data_from_first_page.update({str(sheet[f'B{i}'].value)[:4] + '0': 0})
 
     # for key, i in data_from_first_page.items():
     #     print(key, i)
@@ -577,18 +607,18 @@ def get_first_page():
 
 
 def get_second_page():
-    book = load_workbook(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата\Торговый зал АФ №40_dwh.xlsx', data_only=True)
+    book = load_workbook(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата\Торговый зал АФ №10_dwh.xlsx', data_only=True)
 
     sheet = book['Стр 4-5']
 
     data_from_second_page = dict()
 
     data_from_second_page.update({'Всего': round(sheet['E49'].value)})
-
+    print('KEK:', sheet['D46'].value)
     for i in range(6, 49):
         row = []
         if sheet[f'A{i}'].value is not None:
-            for vals in 'EFGHIJK':
+            for vals in 'DEFGHIJK':
                 if sheet[f'{vals}{i}'].value is not None:
                     row.append(round(sheet[f'{vals}{i}'].value))
                 else:
@@ -605,6 +635,65 @@ def get_second_page():
     return data_from_second_page
 
 
+def get_calculated_dicts(first_, second_):
+
+    dict1 = first_.copy()
+    dict2 = second_.copy()
+
+    dick = dict({'Всего': dict2['Всего']})
+
+    if dict1['Всего'] != dict2['Всего']:
+        for key, val in dict2.items():
+            if key != 'Всего':
+                # print(key, val)
+                # print(str(key)[:4], sum(val))
+                if dick.get(str(key)[:4] + '0') is None:
+                    if str(key)[:4] == '1089':
+                        dick.update({str(key)[:4] + '1': sum(val)})
+                    else:
+                        dick.update({str(key)[:4] + '0': sum(val)})
+                else:
+                    if str(key)[:4] == '1089':
+                        dick.update({str(key)[:4] + '1': sum(val) + dick.get(str(key)[:4] + '1')})
+                    else:
+                        dick.update({str(key)[:4] + '0': sum(val) + dick.get(str(key)[:4] + '0')})
+
+    # print(dick)
+    # print(sum(dick.values()) - dick['Всего'])
+    dick.pop('10610')
+    s, s1 = 0, 0
+    for key in dict1.keys():
+
+        if key == '10610' or key == 'Всего':
+            continue
+
+        # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
+        dict1.update({key: dict1.get(key) - (dict1.get(key) - dick.get(key))})
+        # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
+        s += dict1.get(key)
+        s1 += dick.get(key)
+        # print('-----------------------------------------')
+
+    # print('==========================')
+    dick['Всего'] = sum(dick.values()) - dick['Всего']
+    dict1['Всего'] = sum(dict1.values()) - dict1['Всего']
+    # print(s, s1)
+    # print(sum(dick.values()) - dick['Всего'], dick['Всего'])
+    # print(sum(dict1.values()) - dict1['Всего'], dict1['Всего'])
+    for key in dict1.keys():
+        if key == 'Всего':
+            # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
+            dict1.update({key: dict1.get(key) - (dict1.get(key) - dick.get(key))})
+            # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
+            # print('-----------------------------------------')
+
+    # print("Updated dick:", dick)
+    # print("Updated dict1:", dict1)
+    # print("Updated dict2:", dict2)
+
+    return dict1, dict2
+
+
 if __name__ == '__main__':
 
     # sql_create_table()
@@ -615,22 +704,19 @@ if __name__ == '__main__':
     print(first)
     print(second)
 
+    first, second = get_calculated_dicts(first, second)
+
+    print()
+    print(first)
+    print(second)
+
     # for key, i in second.items():
     #     print(key, sum(i))
 
-    dict1 = first.copy()
-    dict2 = second.copy()
-
-    # Print the updated dictionaries
-    print("Updated dict1:", dict1)
-    print("Updated dict2:", dict2)
-
-    # for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
-    #     if '~' not in branch:
-    #         branch_ = branch.replace('_dwh.xlsx', '')
-    #         start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
-
-
+    for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
+        if '~' not in branch:
+            branch_ = branch.replace('_dwh.xlsx', '')
+            start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
 
 
 
