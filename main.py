@@ -1,6 +1,7 @@
 import datetime
 import os
 import shutil
+import time
 from contextlib import suppress
 from time import sleep
 import pandas as pd
@@ -22,9 +23,7 @@ def sql_create_table():
         CREATE TABLE IF NOT EXISTS ROBOT.{robot_name.replace("-", "_")} (
             started_time timestamp,
             ended_time timestamp,
-            store_id int UNIQUE,
             store_name text UNIQUE,
-            full_name text UNIQUE,
             executor_name text,
             status text,
             error_reason text,
@@ -63,7 +62,7 @@ def get_all_data():
     cur.execute(table_create_query)
 
     df1 = pd.DataFrame(cur.fetchall())
-    df1.columns = ['started_time', 'ended_time', 'store_id', 'name', 'full_name', 'executor_name', 'status', 'error_reason', 'error_saved_path', 'execution_time', 'ecp_path', 'fact1', 'fact2', 'fact3', 'site1', 'site2', 'site3']
+    df1.columns = ['started_time', 'ended_time', 'full_name', 'executor_name', 'status', 'error_reason', 'error_saved_path', 'execution_time', 'ecp_path']
 
     cur.close()
     conn.close()
@@ -104,7 +103,7 @@ def get_data_to_execute():
     df1 = pd.DataFrame(cur.fetchall())
 
     with suppress(Exception):
-        df1.columns = ['started_time', 'ended_time', 'store_id', 'name', 'full_name', 'executor_name', 'status', 'error_reason', 'error_saved_path', 'execution_time', 'ecp_path', 'fact1', 'fact2', 'fact3', 'site1', 'site2', 'site3']
+        df1.columns = ['started_time', 'ended_time', 'full_name', 'executor_name', 'status', 'error_reason', 'error_saved_path', 'execution_time', 'ecp_path']
 
     cur.close()
     conn.close()
@@ -112,7 +111,7 @@ def get_data_to_execute():
     return df1
 
 
-def insert_data_in_db(started_time, store_id, store_name, full_name, executor_name, status_, error_reason, error_saved_path, execution_time, ecp_path_, fact1, fact2, fact3, site1, site2, site3):
+def insert_data_in_db(started_time, store_name, executor_name, status_, error_reason, error_saved_path, execution_time, ecp_path_):
     conn = psycopg2.connect(host=db_host, port=db_port, database=db_name, user=db_user, password=db_pass)
 
     print('Started inserting')
@@ -123,22 +122,20 @@ def insert_data_in_db(started_time, store_id, store_name, full_name, executor_na
         delete from ROBOT.{robot_name.replace("-", "_")} where store_name = '{store_name}'
     """
     query = f"""
-        INSERT INTO ROBOT.{robot_name.replace("-", "_")} (started_time, ended_time, store_id, store_name, full_name, executor_name, status, error_reason, error_saved_path, execution_time, ecp_path, fact1, fact2, fact3, site1, site2, site3)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO ROBOT.{robot_name.replace("-", "_")} (started_time, ended_time, store_name, executor_name, status, error_reason, error_saved_path, execution_time, ecp_path)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     # ended_time = '' if status_ != 'success' else datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f")
     ended_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f")
     values = (
         started_time,
         ended_time,
-        str(store_id),
         store_name,
-        full_name,
         executor_name,
         status_,
         error_reason,
         error_saved_path,
-        execution_time,
+        str(execution_time),
         ecp_path_
     )
 
@@ -167,7 +164,6 @@ def insert_data_in_db(started_time, store_id, store_name, full_name, executor_na
 
 
 def get_all_branches_with_codes():
-    import psycopg2
 
     conn = psycopg2.connect(dbname='adb', host='172.16.10.22', port='5432',
                             user='rpa_robot', password='Qaz123123+')
@@ -340,9 +336,6 @@ def save_and_send(web, save):
 def start_single_branch(filepath, store, values_first_part, values_second_part):
     print('Started web')
 
-    # if any(val < 0 for val in values_first_part):
-    #     return ['failed', 'Отрицательная сумма в первой части 2Т', [None, None, None]]
-
     web = Web()
     web.run()
     web.get('https://cabinet.stat.gov.kz/')
@@ -418,7 +411,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=1.5):
                 web.execute_script_click_xpath("//span[contains(text(), 'Пройти позже')]")
 
-            for _ in range(3):
+            for _ in range(5):
 
                 is_loaded = True if len(web.find_elements("//div[contains(@class, 'x-grid-row-expander')]", timeout=15)) >= 1 else False
 
@@ -432,7 +425,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                         web.quit()
 
                         print('Return those shit')
-                        return ['Нет 1-П', saved_path, '']
+                        return ['failed', saved_path, 'Нет 1-П']
 
                 else:
                     web.refresh()
@@ -464,7 +457,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                 web.quit()
 
                 print('Return that shit')
-                return ['Выскочила херня', saved_path, '']
+                return ['failed', saved_path, 'Выскочила ошиПочка']
 
             logger.info('Check3')
             web.wait_element('//*[@id="sel_statcode_accord"]/div/p/b[1]', timeout=100)
@@ -557,11 +550,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             web.quit()
 
             print('Successed')
-
-            if sites[0] == values_first_part[0] and sites[1] == values_first_part[1] and sites[2] == values_first_part[2]:
-                return ['success', '', sites]
-            else:
-                return ['success', 'Были разные данные, робот изменил', sites]
+            return ['success', '', '']
 
             # return ['success', '', sites]
 
@@ -573,7 +562,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
         web.quit()
 
         print('Srok istek')
-        return ['Срок ЭЦП истёк', saved_path, '']
+        return ['failed', saved_path, 'Срок ЭЦП истёк']
 
 
 def get_first_page():
@@ -696,7 +685,7 @@ def get_calculated_dicts(first_, second_):
 
 if __name__ == '__main__':
 
-    # sql_create_table()
+    sql_create_table()
 
     first = get_first_page()
     second = get_second_page()
@@ -716,10 +705,18 @@ if __name__ == '__main__':
     for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
         if '~' not in branch:
             branch_ = branch.replace('_dwh.xlsx', '')
-            start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
+            start_time = time.time()
+            insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch,
+                              executor_name=ip_address, status_='processing', error_reason='', error_saved_path='', execution_time='', ecp_path_=os.path.join(ecp_paths, branch_))
+            try:
+                status, error_saved_path, error = start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
 
+                insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch,
+                                  executor_name=ip_address, status_=status, error_reason=error, error_saved_path=error_saved_path, execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
+            except Exception as error:
 
-
+                insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch,
+                                  executor_name=ip_address, status_='success', error_reason=str(error), error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
 
