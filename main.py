@@ -565,9 +565,9 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
         return ['failed', saved_path, 'Срок ЭЦП истёк']
 
 
-def get_first_page():
+def get_first_page(filepath):
 
-    book = load_workbook(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата\Торговый зал АФ №10_dwh.xlsx', data_only=True)
+    book = load_workbook(filepath, data_only=True)
 
     sheet = book['Стр 2-3']
 
@@ -595,8 +595,8 @@ def get_first_page():
     return data_from_first_page
 
 
-def get_second_page():
-    book = load_workbook(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата\Торговый зал АФ №10_dwh.xlsx', data_only=True)
+def get_second_page(filepath):
+    book = load_workbook(filepath, data_only=True)
 
     sheet = book['Стр 4-5']
 
@@ -646,8 +646,13 @@ def get_calculated_dicts(first_, second_):
                         dick.update({str(key)[:4] + '1': sum(val) + dick.get(str(key)[:4] + '1')})
                     else:
                         dick.update({str(key)[:4] + '0': sum(val) + dick.get(str(key)[:4] + '0')})
+    else:
+        return dict1, dict2
 
-    # print(dick)
+    print('=======')
+    print(dict1)
+    print(dict2)
+    print(dick)
     # print(sum(dick.values()) - dick['Всего'])
     dick.pop('10610')
     s, s1 = 0, 0
@@ -687,23 +692,21 @@ if __name__ == '__main__':
 
     sql_create_table()
 
-    first = get_first_page()
-    second = get_second_page()
-    # print(second.keys(), second.get(list(second.keys())[0]))
-    print(first)
-    print(second)
-
-    first, second = get_calculated_dicts(first, second)
-
-    print()
-    print(first)
-    print(second)
-
-    # for key, i in second.items():
-    #     print(key, sum(i))
-
     for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
         if '~' not in branch:
+            if 'АСФ №15' not in branch:
+                continue
+            first = get_first_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
+            second = get_second_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
+            # print(second.keys(), second.get(list(second.keys())[0]))
+            print(first)
+            print(second)
+
+            first, second = get_calculated_dicts(first, second)
+
+            print()
+            print(first)
+            print(second)
             branch_ = branch.replace('_dwh.xlsx', '')
             start_time = time.time()
             insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch,
