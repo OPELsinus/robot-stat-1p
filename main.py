@@ -3,6 +3,7 @@ import os
 import shutil
 import time
 from contextlib import suppress
+from math import floor
 from time import sleep
 import pandas as pd
 
@@ -310,7 +311,7 @@ def wait_image_loaded():
     while True:
         for file in os.listdir(download_path):
             if '.jpg' in file and 'crdownload' not in file:
-                shutil.move(os.path.join(download_path, file), os.path.join(os.path.join(saving_path, 'Отчёты 2т'), branch + '.jpg'))
+                shutil.move(os.path.join(download_path, file), os.path.join(os.path.join(saving_path, 'Отчёты 1П'), branch + '.jpg'))
                 print(file)
                 found = True
                 break
@@ -327,10 +328,15 @@ def save_and_send(web, save):
         if web.wait_element("//span[text() = 'Сохранить отчет и Удалить другие']", timeout=5):
             web.execute_script_click_xpath("//span[text() = 'Сохранить отчет и Удалить другие']")
     print('Clicking Send')
-    web.execute_script_click_xpath("//span[text() = 'Отправить']")
-    print('Clicked Send')
-    web.wait_element("//input[@value = 'Персональный компьютер']", timeout=30)
-    web.execute_script_click_xpath("//input[@value = 'Персональный компьютер']")
+    errors_count = web.find_elements('//*[@id="statflc"]/ul/li/a')
+    if len(errors_count) <= 1:
+        print('ALL GOOD')
+        web.execute_script_click_xpath("//span[text() = 'Отправить']")
+        print('Clicked Send')
+        web.wait_element("//input[@value = 'Персональный компьютер']", timeout=30)
+        web.execute_script_click_xpath("//input[@value = 'Персональный компьютер']")
+    else:
+        print('GOVNO OSHIBKA VYLEZLA')
 
 
 def start_single_branch(filepath, store, values_first_part, values_second_part):
@@ -445,6 +451,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             # ? Switch to the second window
             web.driver.switch_to.window(web.driver.window_handles[-1])
 
+            web.find_element('/html/body/div[1]').click()
             web.wait_element('//*[@id="td_select_period_level_1"]/span')
             web.execute_script_click_js("#btn-opendata")
             sleep(0.3)
@@ -477,17 +484,21 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
 
             web.wait_element("//a[contains(text(), 'Страница 1')]", timeout=10)
             web.find_element("//a[contains(text(), 'Страница 1')]").click()
-
+            print()
             id_ = 3
             for ind, key in enumerate(first.keys()):
+
                 if key == 'Всего':
                     continue
                 if first.get(key) > 0:
-                    print(key, first.get(key))
-                    print(f'//*[@id="{id_}"]/td[3]', f'//*[@id="{id_}_col_1"]')
+                    # print(key, first.get(key))
+                    # print(f'//*[@id="{id_}"]/td[3]', f'//*[@id="{id_}_col_1"]')
                     web.find_element(f'//*[@id="3"]/td[2]').click()
+
                     web.find_element(f'//*[@id="{id_}_col_1"]').type_keys(str(key))
-                    sleep(0.5)
+
+                    sleep(1.5)
+
                     keyboard.send_keys('{ENTER}')
 
                     # web.find_element(f'//*[@id="{ind + 1}"]/td[3]').click()
@@ -496,6 +507,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                     id_ += 1
 
             keyboard.send_keys('{TAB}')
+            # sleep(100)
             # ? Second page
             web.wait_element("//a[contains(text(), 'Страница 2')]", timeout=10)
             web.find_element("//a[contains(text(), 'Страница 2')]").click()
@@ -521,12 +533,14 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
 
                 for ind, val in enumerate(second.get(cur_key)):
 
-                    if ind < 2:
+                    if val == 0 and ind >= 2:
+                        continue
+                    else:
                         web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]").click(double=True)
                         print(second.get(cur_key)[ind])
-                        print(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input")
+                        # print(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input")
                         web.wait_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input")
-                        web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input").type_keys(second.get(cur_key)[ind], delay=1)
+                        web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input").type_keys(str(second.get(cur_key)[ind]), delay=1)
 
                 id_ += 1
 
@@ -537,14 +551,13 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_1']", value='87717041897')
             web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_2']", value='87717041897')
             web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_3']", value='Narymbayeva@magnum.kz')
-            sleep(1000)
 
-            # save_and_send(web, save=True)
-
-            # sign_ecp(ecp_sign)
+            save_and_send(web, save=True)
+            # sleep(3000)
+            sign_ecp(ecp_sign)
             # sleep(1000)
 
-            # wait_image_loaded()
+            wait_image_loaded()
 
             web.close()
             web.quit()
@@ -631,21 +644,29 @@ def get_calculated_dicts(first_, second_):
 
     dick = dict({'Всего': dict2['Всего']})
 
-    if dict1['Всего'] != dict2['Всего']:
+    sum1, sum2 = 0, 0
+    for key, val in first.items():
+        if key != 'Всего':
+            sum1 += val
+    for key, val in second.items():
+        if key != 'Всего':
+            sum2 += val[1]
+    print('SUMS:', sum1, sum2)
+    if sum1 != sum2: # dict1['Всего'] != dict2['Всего']
         for key, val in dict2.items():
             if key != 'Всего':
                 # print(key, val)
                 # print(str(key)[:4], sum(val))
                 if dick.get(str(key)[:4] + '0') is None:
                     if str(key)[:4] == '1089':
-                        dick.update({str(key)[:4] + '1': sum(val)})
+                        dick.update({str(key)[:4] + '1': val[1]})
                     else:
-                        dick.update({str(key)[:4] + '0': sum(val)})
+                        dick.update({str(key)[:4] + '0': val[1]})
                 else:
                     if str(key)[:4] == '1089':
-                        dick.update({str(key)[:4] + '1': sum(val) + dick.get(str(key)[:4] + '1')})
+                        dick.update({str(key)[:4] + '1': val[1] + dick.get(str(key)[:4] + '1')})
                     else:
-                        dick.update({str(key)[:4] + '0': sum(val) + dick.get(str(key)[:4] + '0')})
+                        dick.update({str(key)[:4] + '0': val[1] + dick.get(str(key)[:4] + '0')})
     else:
         return dict1, dict2
 
@@ -694,32 +715,49 @@ if __name__ == '__main__':
 
     for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
         if '~' not in branch:
-            if 'АСФ №15' not in branch:
-                continue
+            print(branch)
+            # if 'АФ №10' not in branch:
+            #     continue
             first = get_first_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
             second = get_second_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
             # print(second.keys(), second.get(list(second.keys())[0]))
             print(first)
             print(second)
-
+            s1, s2 = 0, 0
+            for key, val in first.items():
+                if key != 'Всего':
+                    s1 += val
+            for key, val in second.items():
+                if key != 'Всего':
+                    s2 += val[1]
+            print(s1, s2)
             first, second = get_calculated_dicts(first, second)
 
             print()
+
             print(first)
             print(second)
-            branch_ = branch.replace('_dwh.xlsx', '')
+            s1, s2 = 0, 0
+            for key, val in first.items():
+                if key != 'Всего':
+                    s1 += val
+            for key, val in second.items():
+                if key != 'Всего':
+                    s2 += val[1]
+            print(s1, s2)
+            branch_ = branch.replace('_stat.xlsx', '')
             start_time = time.time()
-            insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch,
+            insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
                               executor_name=ip_address, status_='processing', error_reason='', error_saved_path='', execution_time='', ecp_path_=os.path.join(ecp_paths, branch_))
             try:
                 status, error_saved_path, error = start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
 
-                insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch,
+                insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
                                   executor_name=ip_address, status_=status, error_reason=error, error_saved_path=error_saved_path, execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
             except Exception as error:
 
-                insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch,
-                                  executor_name=ip_address, status_='success', error_reason=str(error), error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
+                insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
+                                  executor_name=ip_address, status_='failed with error', error_reason=str(error), error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
 
