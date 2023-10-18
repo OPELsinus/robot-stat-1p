@@ -64,7 +64,7 @@ postgre_ip = global_env_data['postgre_ip']
 postgre_port = global_env_data['postgre_port']
 
 # ? PROJECT
-robot_name = 'robot-stat-1p'  # ! FIXME
+robot_name = 'robot-stat-1p'
 config_path = local_path.joinpath(f'.agent\\{robot_name}\\config.json')
 config_data = json_read(config_path)
 chat_id = config_data['chat_id']
@@ -75,6 +75,8 @@ ip_address = socket.gethostbyname(socket.gethostname())
 
 saving_path = global_path.joinpath(f".agent\\{robot_name}\\Output")
 saving_path.mkdir(exist_ok=True, parents=True)
+reports_saving_path = global_path.joinpath(f".agent\\{robot_name}\\Отчёты 1П")
+reports_saving_path.mkdir(exist_ok=True, parents=True)
 
 download_path = Path.home().joinpath('downloads')
 db_host = global_env_data['postgre_ip']

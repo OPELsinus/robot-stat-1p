@@ -13,7 +13,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment
 from pywinauto import keyboard
 
-from config import logger, tg_token, chat_id, db_host, robot_name, db_port, db_name, db_user, db_pass, ip_address, saving_path, download_path, ecp_paths
+from config import logger, tg_token, chat_id, db_host, robot_name, db_port, db_name, db_user, db_pass, ip_address, saving_path, download_path, ecp_paths, reports_saving_path
 from tools.app import App
 from tools.web import Web
 
@@ -306,12 +306,12 @@ def create_and_send_final_report():
     send_file_to_tg(tg_token, chat_id, 'Отправляем отчёт по заполнению', 'result.xlsx')
 
 
-def wait_image_loaded():
+def wait_image_loaded(store_):
     found = False
     while True:
         for file in os.listdir(download_path):
             if '.jpg' in file and 'crdownload' not in file:
-                shutil.move(os.path.join(download_path, file), os.path.join(os.path.join(saving_path, 'Отчёты 1П'), branch + '.jpg'))
+                shutil.move(os.path.join(download_path, file), os.path.join(reports_saving_path, store_ + '.jpg'))
                 print(file)
                 found = True
                 break
@@ -345,7 +345,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
     web = Web()
     web.run()
     web.get('https://cabinet.stat.gov.kz/')
-    logger.info('Check-1')
+    # logger.info('Check-1')
     web.wait_element('//*[@id="idLogin"]')
     web.find_element('//*[@id="idLogin"]').click()
 
@@ -358,7 +358,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
     sleep(0.5)
     web.find_element('//*[@id="loginButton"]').click()
 
-    logger.info('Check-2')
+    # logger.info('Check-2')
     ecp_auth = ''
     ecp_sign = ''
     for files in os.listdir(filepath):
@@ -366,8 +366,9 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             ecp_auth = os.path.join(filepath, files)
         if 'GOST' in files:
             ecp_sign = os.path.join(filepath, files)
+    print(ecp_auth)
 
-    sleep(1)
+    # sleep(100)
     sign_ecp(ecp_auth)
 
     logged_in = web.wait_element('//*[@id="idLogout"]/a', timeout=60)
@@ -380,8 +381,8 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                     web.find_element("//span[contains(text(), 'Пройти позже')]").click()
                 except:
                     save_screenshot(store)
-            logger.info('Check0')
-            if web.wait_element('//*[@id="dontAgreeId-inputEl"]', timeout=5):
+            # logger.info('Check0')
+            if web.wait_element('//*[@id="dontAgreeId-inputEl"]', timeout=2):
                 web.find_element('//*[@id="dontAgreeId-inputEl"]').click()
                 sleep(0.3)
                 web.find_element('//*[@id="saveId-btnIconEl"]').click()
@@ -395,12 +396,12 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                 sign_ecp(ecp_sign)
 
                 try:
-                    web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=5)
+                    web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=2)
                     web.find_element("//span[contains(text(), 'Пройти позже')]").click()
 
                 except:
                     pass
-            logger.info('Check1')
+            # logger.info('Check1')
             web.wait_element('//*[@id="tab-1168-btnInnerEl"]')
             web.find_element('//*[@id="tab-1168-btnInnerEl"]').click()
 
@@ -417,13 +418,19 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=1.5):
                 web.execute_script_click_xpath("//span[contains(text(), 'Пройти позже')]")
 
-            for _ in range(5):
+            found_ = False
+
+            for _ in range(1):
 
                 is_loaded = True if len(web.find_elements("//div[contains(@class, 'x-grid-row-expander')]", timeout=15)) >= 1 else False
 
                 if is_loaded:
-                    if web.wait_element("//div[contains(text(), '1-П')]", timeout=3):
+                    if web.wait_element("//div[contains(text(), '1-П (кварт')]", timeout=3):
                         web.find_element("//div[contains(text(), '1-П')]").click()
+                        found_ = True
+
+                        web.find_element('//*[@id="createReportId-btnIconEl"]').click()
+                        break
 
                     else:
                         saved_path = save_screenshot(store)
@@ -436,15 +443,30 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                 else:
                     web.refresh()
 
+            if not found_:
+                print('Calendar')
+                web.find_element('//span[contains(text(), "Календарь")]').click()
+                web.wait_element('//div[text() = "1-П"]')
+
+                print('Waited')
+                print(web.find_element('//div[text() = "1-П"]/../following-sibling::td[1]/div').get_attr('text'))
+                if web.find_element('//div[text() = "1-П"]') and web.find_element('//div[text() = "1-П"]/../following-sibling::td[1]/div').get_attr('text') == 'квартал':
+                    print('Here')
+                    # web.execute_script_click_xpath('//div[text() = "1-П"]/../following-sibling::td//button/p')
+                    web.find_element('//div[text() = "1-П"]/../following-sibling::td//button').click()
+
+                # saved_path = save_screenshot(store)
+                # web.close()
+                # web.quit()
+                #
+                # print('Return those shit')
+                # return ['failed', saved_path, 'Нет 1-П']
+
             if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=1.5):
                 web.execute_script_click_xpath("//span[contains(text(), 'Пройти позже')]")
             # web.find_element('//*[@id="radio-1133-boxLabelEl"]').click()
             # wait_loading(web, '//*[@id="loadmask-1315"]')
             # web.refresh()
-
-            sleep(0.5)
-
-            web.find_element('//*[@id="createReportId-btnIconEl"]').click()
 
             sleep(1)
 
@@ -456,6 +478,12 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             web.execute_script_click_js("#btn-opendata")
             sleep(0.3)
 
+            if not found_:
+                if web.wait_element('//span[text() = "Подтвердите открытие формы."]', timeout=10):
+                    web.execute_script_click_xpath("//span[text() = 'Подтвердите открытие формы.']/../..//span[text() = 'Открыть']")
+                    sleep(4)
+                    # web.execute_script_click_js("#btn-opendata")
+
             if web.get_element_display('/html/body/div[7]') == 'block':
                 web.find_element('/html/body/div[7]/div[11]/div/button[2]').click()
 
@@ -466,19 +494,22 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                 print('Return that shit')
                 return ['failed', saved_path, 'Выскочила ошиПочка']
 
-            logger.info('Check3')
+            # logger.info('Check3')
+            # sleep(1)
             web.wait_element('//*[@id="sel_statcode_accord"]/div/p/b[1]', timeout=100)
             web.execute_script_click_js("body > div:nth-child(16) > div.ui-dialog-buttonpane.ui-widget-content.ui-helper-clearfix > div > button:nth-child(1) > span")
-            # sleep(10900)
+            # web.execute_script_click_xpath("//span[text() = 'Выбрать']")
+
             web.wait_element('//*[@id="sel_rep_accord"]/h3[1]/a')
-            logger.info('Check999')
+
             sites = []
 
             # ? Open new report to fill it
+            # web.wait_element('//span[text() = "Выберите отчет"]')
 
             print('Clicking1')
-            # web.execute_script_click_js("body > div:nth-child(18) > div.ui-dialog-buttonpane.ui-widget-content.ui-helper-clearfix > div > button:nth-child(1)")
-            web.execute_script_click_xpath('/html/body/div[17]/div[11]/div/button[1]/span')
+            web.execute_script_click_js("body > div:nth-child(18) > div.ui-dialog-buttonpane.ui-widget-content.ui-helper-clearfix > div > button:nth-child(1)")
+            # web.execute_script_click_xpath('/html/body/div[17]/div[11]/div/button[1]/span')
 
             # ? First page
 
@@ -547,17 +578,17 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             keyboard.send_keys('{TAB}')
             # ? Last page
             web.find_element("//a[contains(text(), 'Данные исполнителя')]").click()
-            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_0']", value='Нарымбаева Алия')
-            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_1']", value='87717041897')
-            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_2']", value='87717041897')
-            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_3']", value='Narymbayeva@magnum.kz')
+            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_0']", value='Естаева Акбота Канатовна')
+            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_1']", value='7273391350')
+            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_2']", value='7073882688')
+            web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_3']", value='Yestayeva@magnum.kz')
 
             save_and_send(web, save=True)
             # sleep(3000)
             sign_ecp(ecp_sign)
             # sleep(1000)
 
-            wait_image_loaded()
+            wait_image_loaded(store)
 
             web.close()
             web.quit()
@@ -593,7 +624,7 @@ def get_first_page(filepath):
         try:
             if str(sheet[f'B{i}'].value)[:4] == '1089':
                 data_from_first_page.update({str(sheet[f'B{i}'].value)[:4] + '1': round(sheet[f'C{i}'].value)})
-            else:
+            elif round(sheet[f'C{i}'].value) > 0:
                 data_from_first_page.update({str(sheet[f'B{i}'].value)[:4] + '0': round(sheet[f'C{i}'].value)})
             # print(int(sheet[f'C{i}'].value))
         except:
@@ -648,59 +679,73 @@ def get_calculated_dicts(first_, second_):
     for key, val in first.items():
         if key != 'Всего':
             sum1 += val
+            # print(str(key)[:-1], ',', val)
+    # print('-------------')
     for key, val in second.items():
         if key != 'Всего':
             sum2 += val[1]
+            # print(str(key)[:4], ',', val[1])
     print('SUMS:', sum1, sum2)
-    if sum1 != sum2: # dict1['Всего'] != dict2['Всего']
-        for key, val in dict2.items():
-            if key != 'Всего':
-                # print(key, val)
-                # print(str(key)[:4], sum(val))
-                if dick.get(str(key)[:4] + '0') is None:
-                    if str(key)[:4] == '1089':
-                        dick.update({str(key)[:4] + '1': val[1]})
-                    else:
-                        dick.update({str(key)[:4] + '0': val[1]})
-                else:
-                    if str(key)[:4] == '1089':
-                        dick.update({str(key)[:4] + '1': val[1] + dick.get(str(key)[:4] + '1')})
-                    else:
-                        dick.update({str(key)[:4] + '0': val[1] + dick.get(str(key)[:4] + '0')})
-    else:
-        return dict1, dict2
+    # if sum1 != sum2: # dict1['Всего'] != dict2['Всего']
 
+    for key, val in dict1.items():
+        s = 0
+        for key1, val1 in dict2.items():
+
+            if key1 != 'Всего':
+                if str(key)[:-1] == str(key1)[:4]:
+                    s += dict2.get(key1)[1]
+
+        dict1.update({key: s})
+        # print(key, s)
+    # for key, val in dict2.items():
+    #     if key != 'Всего':
+    #         # print(key, val)
+    #         # print(str(key)[:4], sum(val))
+    #         if dick.get(str(key)[:4] + '0') is None:
+    #             if str(key)[:4] == '1089':
+    #                 dick.update({str(key)[:4] + '1': val[1]})
+    #             else:
+    #                 dick.update({str(key)[:4] + '0': val[1]})
+    #         else:
+    #             if str(key)[:4] == '1089':
+    #                 dick.update({str(key)[:4] + '1': val[1] + dick.get(str(key)[:4] + '1')})
+    #             else:
+    #                 dick.update({str(key)[:4] + '0': val[1] + dick.get(str(key)[:4] + '0')})
+    # else:
+    #     return dict1, dict2
+    dict1.update({'Всего': dict2.get('Всего')})
     print('=======')
     print(dict1)
     print(dict2)
     print(dick)
     # print(sum(dick.values()) - dick['Всего'])
-    dick.pop('10610')
-    s, s1 = 0, 0
-    for key in dict1.keys():
-
-        if key == '10610' or key == 'Всего':
-            continue
-
-        # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
-        dict1.update({key: dict1.get(key) - (dict1.get(key) - dick.get(key))})
-        # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
-        s += dict1.get(key)
-        s1 += dick.get(key)
-        # print('-----------------------------------------')
-
-    # print('==========================')
-    dick['Всего'] = sum(dick.values()) - dick['Всего']
-    dict1['Всего'] = sum(dict1.values()) - dict1['Всего']
-    # print(s, s1)
-    # print(sum(dick.values()) - dick['Всего'], dick['Всего'])
-    # print(sum(dict1.values()) - dict1['Всего'], dict1['Всего'])
-    for key in dict1.keys():
-        if key == 'Всего':
-            # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
-            dict1.update({key: dict1.get(key) - (dict1.get(key) - dick.get(key))})
-            # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
-            # print('-----------------------------------------')
+    # dick.pop('10610')
+    # s, s1 = 0, 0
+    # for key in dict1.keys():
+    #
+    #     if key == '10610' or key == 'Всего':
+    #         continue
+    #
+    #     print(key, '|', dict1.get(key), dick.get(key), '|')
+    #     dict1.update({key: dict1.get(key) - (dict1.get(key) - dick.get(key))})
+    #     # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
+    #     s += dict1.get(key)
+    #     s1 += dick.get(key)
+    #     # print('-----------------------------------------')
+    #
+    # # print('==========================')
+    # dick['Всего'] = sum(dick.values()) - dick['Всего']
+    # dict1['Всего'] = sum(dict1.values()) - dict1['Всего']
+    # # print(s, s1)
+    # # print(sum(dick.values()) - dick['Всего'], dick['Всего'])
+    # # print(sum(dict1.values()) - dict1['Всего'], dict1['Всего'])
+    # for key in dict1.keys():
+    #     if key == 'Всего':
+    #         # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
+    #         dict1.update({key: dict1.get(key) - (dict1.get(key) - dick.get(key))})
+    #         # print(key, '|', dict1.get(key), dick.get(key), '|', dict1.get(key) - dick.get(key))
+    #         # print('-----------------------------------------')
 
     # print("Updated dick:", dick)
     # print("Updated dict1:", dict1)
@@ -713,16 +758,22 @@ if __name__ == '__main__':
 
     sql_create_table()
 
+    checked = False
+
     for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
         if '~' not in branch:
             print(branch)
-            # if 'АФ №10' not in branch:
+
+            # if 'АФ №14' in branch or 'АФ №22' in branch or 'АФ №1' in branch or 'АФ №10' in branch or 'АСФ №3' in branch or 'АСФ №1' in branch or 'АСФ №2' in branch or 'АСФ №15' in branch or 'АФ №21' in branch:
             #     continue
+            if branch.replace('Торговый зал ', '').replace('_stat.xlsx', '') not in ['ШФ №32']:
+                continue
             first = get_first_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
             second = get_second_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
             # print(second.keys(), second.get(list(second.keys())[0]))
             print(first)
             print(second)
+
             s1, s2 = 0, 0
             for key, val in first.items():
                 if key != 'Всего':
@@ -745,19 +796,20 @@ if __name__ == '__main__':
                 if key != 'Всего':
                     s2 += val[1]
             print(s1, s2)
+            # sleep(1000)
             branch_ = branch.replace('_stat.xlsx', '')
             start_time = time.time()
             insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
                               executor_name=ip_address, status_='processing', error_reason='', error_saved_path='', execution_time='', ecp_path_=os.path.join(ecp_paths, branch_))
-            try:
+            if True:
                 status, error_saved_path, error = start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
-
+                # status, error_saved_path, error = 'success', '', ''
                 insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
                                   executor_name=ip_address, status_=status, error_reason=error, error_saved_path=error_saved_path, execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
-            except Exception as error:
-
-                insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
-                                  executor_name=ip_address, status_='failed with error', error_reason=str(error), error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
+            # except Exception as error:
+            #
+            #     insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
+            #                       executor_name=ip_address, status_='failed with error', error_reason=str(error), error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
 
