@@ -311,7 +311,7 @@ def wait_image_loaded(store_):
     while True:
         for file in os.listdir(download_path):
             if '.jpg' in file and 'crdownload' not in file:
-                shutil.move(os.path.join(download_path, file), os.path.join(reports_saving_path, store_ + '.jpg'))
+                shutil.move(os.path.join(download_path, file), os.path.join(reports_saving_path, store_.replace('_stat.xlsx', '') + '.jpg'))
                 print(file)
                 found = True
                 break
@@ -339,109 +339,190 @@ def save_and_send(web, save):
         print('GOVNO OSHIBKA VYLEZLA')
 
 
+def wait_loading_1p(web, store):
+
+    for i in range(5):
+
+        if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=1.5):
+            web.execute_script_click_xpath("//span[contains(text(), 'Пройти позже')]")
+
+        if web.wait_element("(//tr[@role='row'])[1]", timeout=5):
+
+            if web.wait_element("//div[contains(text(), '1-П (кварт')]", timeout=3):
+                web.find_element("//div[contains(text(), '1-П (кварт')]").click()
+
+                return True
+
+            # else:
+            #     saved_path = save_screenshot(store.replace('_stat.xlsx', ''))
+            #     web.close()
+            #     web.quit()
+            #
+            #     print('Return those shit')
+            #     return False
+
+        else:
+            web.driver.refresh()
+
+    # saved_path = save_screenshot(store)
+    # web.close()
+    # web.quit()
+
+    print('Return those shit')
+    return False
+
+
+def proverka_ecp(web):
+
+    if web.wait_element('//*[@id="AgreeId_header_hd-textEl"]', timeout=.5):
+        web.execute_script_click_xpath("//span[text() = 'Согласен']")
+
+
 def start_single_branch(filepath, store, values_first_part, values_second_part):
+
+    def pass_later():
+        if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=1.5):
+            print('PASSING LATER')
+            web.execute_script_click_xpath("//span[contains(text(), 'Пройти позже')]")
+
     print('Started web')
 
+    ecp_auth = ''
+    ecp_sign = ''
+    for file in os.listdir(filepath):
+
+        if 'AUTH' in file:
+            ecp_auth = os.path.join(filepath, file)
+        if 'GOST' in file:
+            ecp_sign = os.path.join(filepath, file)
+
+    print(ecp_auth, '|', ecp_sign)
     web = Web()
     web.run()
     web.get('https://cabinet.stat.gov.kz/')
-    # logger.info('Check-1')
+    print('1.0')
+    logger.info('Check-1')
+    print('1.1')
+
+    logger.info('refreshed')
+
+    proverka_ecp(web=web)
+
     web.wait_element('//*[@id="idLogin"]')
     web.find_element('//*[@id="idLogin"]').click()
+    print('1.2')
+    proverka_ecp(web=web)
 
-    web.wait_element('//*[@id="button-1077-btnEl"]')
-    web.find_element('//*[@id="button-1077-btnEl"]').click()
-
-    web.wait_element('//*[@id="lawAlertCheck"]')
-    web.find_element('//*[@id="lawAlertCheck"]').click()
-
-    sleep(0.5)
+    # * --- deprecated (maybe useful in future)
+    # web.wait_element('//*[@id="button-1077-btnEl"]')
+    # web.find_element('//*[@id="button-1077-btnEl"]').click()
+    # * ---
+    # proverka_ecp(web=web)
+    print()
+    # web.wait_element('//*[@id="lawAlertCheck"]')
+    # web.find_element('//*[@id="lawAlertCheck"]').click()
+    web.execute_script_click_xpath("//input[@id='lawAlertCheck']")
+    print('1.3')
+    time.sleep(0.5)
     web.find_element('//*[@id="loginButton"]').click()
 
-    # logger.info('Check-2')
-    ecp_auth = ''
-    ecp_sign = ''
-    for files in os.listdir(filepath):
-        if 'AUTH' in files:
-            ecp_auth = os.path.join(filepath, files)
-        if 'GOST' in files:
-            ecp_sign = os.path.join(filepath, files)
-    print(ecp_auth)
+    logger.info('Check-2')
 
-    # sleep(100)
+    time.sleep(1)
+
+    # send_message_to_tg(tg_token, chat_id, f"Started ECP, {datetime.datetime.now()}")
     sign_ecp(ecp_auth)
+    # send_message_to_tg(tg_token, chat_id, f"Finished ECP, {datetime.datetime.now()}")
+    print('1.4')
+    logged_in = web.wait_element("//a[text()='Выйти']", timeout=10)
 
-    logged_in = web.wait_element('//*[@id="idLogout"]/a', timeout=60)
+    print('1.44')
+    store = branch.split('\\')[-1]
+    print('1.444')
     # sleep(1000)
     if logged_in:
-        if web.find_element("//a[text() = 'Выйти']"):
+        print('1.45')
+        if web.find_element("//a[text()='Выйти']", timeout=30):
+            print('1.5')
 
             if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=5):
                 try:
-                    web.find_element("//span[contains(text(), 'Пройти позже')]").click()
+                    print('1.6')
+                    web.find_element("//span[contains(text(), 'Пройти позже')]", timeout=5).click()
                 except:
                     save_screenshot(store)
-            # logger.info('Check0')
-            if web.wait_element('//*[@id="dontAgreeId-inputEl"]', timeout=2):
+                    # print('HUETA')
+                    # sleep(200)
+            logger.info('Check0')
+            if web.wait_element('//*[@id="dontAgreeId-inputEl"]', timeout=5):
                 web.find_element('//*[@id="dontAgreeId-inputEl"]').click()
                 sleep(0.3)
                 web.find_element('//*[@id="saveId-btnIconEl"]').click()
                 sleep(1)
-                web.find_element('//*[@id="ext-gen1893"]').click()
-                web.find_element('//*[@id="boundlist-1327-listEl"]/ul/li').click()
 
-                sleep(1)
-                web.find_element('//*[@id="button-1326-btnIconEl"]').click()
+                # * --- Deprecated (maybe useful)
+                # web.find_element('//*[@id="ext-gen1893"]').click()
+                # web.find_element('//*[@id="boundlist-1327-listEl"]/ul/li').click()
+                # * ---
+
+                web.wait_element('//*[@id="keyCombo-inputEl"]')
+
+                web.execute_script_click_xpath("//*[@id='keyCombo-inputEl']/../following-sibling::td//div")
+
+                web.find_element("//li[contains(text(), 'Персональный компьютер')]").click()
+                sleep(1.5)
+
+                web.execute_script_click_xpath("//span[contains(text(), 'Продолжить')]")
+
                 print('Done lol')
                 sign_ecp(ecp_sign)
-
+                print('Finished done lol')
                 try:
-                    web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=2)
-                    web.find_element("//span[contains(text(), 'Пройти позже')]").click()
+                    if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=5):
+                        web.find_element("//span[contains(text(), 'Пройти позже')]").click()
 
                 except:
                     pass
-            # logger.info('Check1')
-            web.wait_element('//*[@id="tab-1168-btnInnerEl"]')
-            web.find_element('//*[@id="tab-1168-btnInnerEl"]').click()
 
-            # sleep(0.7)
+            # web.wait_element('//*[@id="radio-1131-boxLabelEl"]')
 
-            web.wait_element('//*[@id="radio-1131-boxLabelEl"]')
-
-            if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=1.5):
-                web.execute_script_click_xpath("//span[contains(text(), 'Пройти позже')]")
-            sleep(1)
+            pass_later()
+            print('OTCHETY')
+            web.wait_element("//span[contains(text(), 'Мои отчёты')]")
+            web.execute_script_click_xpath("//span[contains(text(), 'Мои отчёты')]")
 
             # ? Check if 1П exists
 
-            if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=1.5):
-                web.execute_script_click_xpath("//span[contains(text(), 'Пройти позже')]")
+            pass_later()
 
-            found_ = False
+            # * ------- Uncomment -------
+            found_ = wait_loading_1p(web, store)
 
-            for _ in range(1):
+            # for _ in range(1):
+            #
+            #     is_loaded = True if len(web.find_elements("//div[contains(@class, 'x-grid-row-expander')]", timeout=15)) >= 1 else False
+            #
+            #     if is_loaded:
+            #         if web.wait_element("//div[contains(text(), '1-П (кварт')]", timeout=3):
+            #             web.find_element("//div[contains(text(), '1-П')]").click()
+            #             found_ = True
+            #
+            #             web.find_element('//*[@id="createReportId-btnIconEl"]').click()
+            #             break
+            #
+            #         else:
+            #             saved_path = save_screenshot(store)
+            #             web.close()
+            #             web.quit()
+            #
+            #             print('Return those shit')
+            #             return ['failed', saved_path, 'Нет 1-П']
+            #
+            #     else:
+            #         web.refresh()
 
-                is_loaded = True if len(web.find_elements("//div[contains(@class, 'x-grid-row-expander')]", timeout=15)) >= 1 else False
-
-                if is_loaded:
-                    if web.wait_element("//div[contains(text(), '1-П (кварт')]", timeout=3):
-                        web.find_element("//div[contains(text(), '1-П')]").click()
-                        found_ = True
-
-                        web.find_element('//*[@id="createReportId-btnIconEl"]').click()
-                        break
-
-                    else:
-                        saved_path = save_screenshot(store)
-                        web.close()
-                        web.quit()
-
-                        print('Return those shit')
-                        return ['failed', saved_path, 'Нет 1-П']
-
-                else:
-                    web.refresh()
+            if found_:
+                web.find_element('//*[@id="createReportId-btnIconEl"]').click()
 
             if not found_:
                 print('Calendar')
@@ -464,9 +545,6 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
 
             if web.wait_element("//span[contains(text(), 'Пройти позже')]", timeout=1.5):
                 web.execute_script_click_xpath("//span[contains(text(), 'Пройти позже')]")
-            # web.find_element('//*[@id="radio-1133-boxLabelEl"]').click()
-            # wait_loading(web, '//*[@id="loadmask-1315"]')
-            # web.refresh()
 
             sleep(1)
 
@@ -766,7 +844,8 @@ if __name__ == '__main__':
 
             # if 'АФ №14' in branch or 'АФ №22' in branch or 'АФ №1' in branch or 'АФ №10' in branch or 'АСФ №3' in branch or 'АСФ №1' in branch or 'АСФ №2' in branch or 'АСФ №15' in branch or 'АФ №21' in branch:
             #     continue
-            if branch.replace('Торговый зал ', '').replace('_stat.xlsx', '') not in ['ШФ №32']:
+            branch__ = branch.replace('Торговый зал ', '').replace('_stat.xlsx', '')
+            if branch__ not in ['ШФ №32', 'АСФ №1', 'АСФ №15']:
                 continue
             first = get_first_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
             second = get_second_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
