@@ -65,7 +65,7 @@ postgre_port = global_env_data['postgre_port']
 
 # ? PROJECT
 robot_name = 'robot-stat-1p'
-config_path = local_path.joinpath(f'.agent\\{robot_name}\\config.json')
+config_path = global_path.joinpath(f'.agent\\{robot_name}\\config.json')
 config_data = json_read(config_path)
 chat_id = config_data['chat_id']
 

@@ -563,14 +563,16 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                     # web.execute_script_click_js("#btn-opendata")
 
             if web.get_element_display('/html/body/div[7]') == 'block':
-                web.find_element('/html/body/div[7]/div[11]/div/button[2]').click()
-
-                saved_path = save_screenshot(store)
-                web.close()
-                web.quit()
-
-                print('Return that shit')
-                return ['failed', saved_path, 'Выскочила ошиПочка']
+                web.find_element("(//span[text()='Открыть'])[3]").click()
+                # web.find_element('/html/body/div[7]/div[11]/div/button[2]').click()
+                #
+                # saved_path = save_screenshot(store)
+                # sleep(1000)
+                # web.close()
+                # web.quit()
+                #
+                # print('Return that shit')
+                # return ['failed', saved_path, 'Выскочила ошиПочка']
 
             # logger.info('Check3')
             # sleep(1)
@@ -661,9 +663,9 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
             web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_2']", value='7073882688')
             web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_3']", value='Yestayeva@magnum.kz')
 
-            save_and_send(web, save=True)
-            # sleep(3000)
-            sign_ecp(ecp_sign)
+            # save_and_send(web, save=True)
+            sleep(3000)
+            # sign_ecp(ecp_sign)
             # sleep(1000)
 
             wait_image_loaded(store)
@@ -834,61 +836,78 @@ def get_calculated_dicts(first_, second_):
 
 if __name__ == '__main__':
 
-    sql_create_table()
+    try:
+        sql_create_table()
 
-    checked = False
+        checked = False
 
-    for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
-        if '~' not in branch:
-            print(branch)
+        for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
+            if '~' not in branch:
+                print(branch)
 
-            # if 'АФ №14' in branch or 'АФ №22' in branch or 'АФ №1' in branch or 'АФ №10' in branch or 'АСФ №3' in branch or 'АСФ №1' in branch or 'АСФ №2' in branch or 'АСФ №15' in branch or 'АФ №21' in branch:
-            #     continue
-            branch__ = branch.replace('Торговый зал ', '').replace('_stat.xlsx', '')
-            if branch__ not in ['ШФ №32', 'АСФ №1', 'АСФ №15']:
-                continue
-            first = get_first_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
-            second = get_second_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
-            # print(second.keys(), second.get(list(second.keys())[0]))
-            print(first)
-            print(second)
+                # if 'АФ №14' in branch or 'АФ №22' in branch or 'АФ №1' in branch or 'АФ №10' in branch or 'АСФ №3' in branch or 'АСФ №1' in branch or 'АСФ №2' in branch or 'АСФ №15' in branch or 'АФ №21' in branch:
+                #     continue
+                branch__ = branch.replace('_stat.xlsx', '')
+                found_ = False
+                for reports in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-stat-1p\Отчёты 1П'):
+                    if reports.replace('.jpg', '') == branch__:
+                        found_ = True
+                        break
+                if found_:
+                    continue
+                first = get_first_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
+                second = get_second_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
+                # print(second.keys(), second.get(list(second.keys())[0]))
+                print(first)
+                print(second)
 
-            s1, s2 = 0, 0
-            for key, val in first.items():
-                if key != 'Всего':
-                    s1 += val
-            for key, val in second.items():
-                if key != 'Всего':
-                    s2 += val[1]
-            print(s1, s2)
-            first, second = get_calculated_dicts(first, second)
+                s1, s2 = 0, 0
+                for key, val in first.items():
+                    if key != 'Всего':
+                        s1 += val
+                for key, val in second.items():
+                    if key != 'Всего':
+                        s2 += val[1]
+                print(s1, s2)
+                first, second = get_calculated_dicts(first, second)
 
-            print()
+                print()
 
-            print(first)
-            print(second)
-            s1, s2 = 0, 0
-            for key, val in first.items():
-                if key != 'Всего':
-                    s1 += val
-            for key, val in second.items():
-                if key != 'Всего':
-                    s2 += val[1]
-            print(s1, s2)
-            # sleep(1000)
-            branch_ = branch.replace('_stat.xlsx', '')
-            start_time = time.time()
-            insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
-                              executor_name=ip_address, status_='processing', error_reason='', error_saved_path='', execution_time='', ecp_path_=os.path.join(ecp_paths, branch_))
-            if True:
-                status, error_saved_path, error = start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
-                # status, error_saved_path, error = 'success', '', ''
+                print(first)
+                print(second)
+                s1, s2 = 0, 0
+                for key, val in first.items():
+                    if key != 'Всего':
+                        s1 += val
+                for key, val in second.items():
+                    if key != 'Всего':
+                        s2 += val[1]
+                print(s1, s2)
+                # sleep(1000)
+                branch_ = branch.replace('_stat.xlsx', '')
+                start_time = time.time()
                 insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
-                                  executor_name=ip_address, status_=status, error_reason=error, error_saved_path=error_saved_path, execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
+                                  executor_name=ip_address, status_='processing', error_reason='', error_saved_path='', execution_time='', ecp_path_=os.path.join(ecp_paths, branch_))
+                if True:
+                    for tries in range(5):
+                        try:
+                            status, error_saved_path, error = start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
+                            # status, error_saved_path, error = 'success', '', ''
+                            insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
+                                              executor_name=ip_address, status_=status, error_reason=error, error_saved_path=error_saved_path, execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
+                            break
+                        except Exception as err:
+                            print(f'Single branch error occured: {err}')
+                            logger.info(f'Single branch error occured: {err}')
+                            logger.warning(f'Single branch error occured: {err}')
 
-            # except Exception as error:
-            #
-            #     insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
-            #                       executor_name=ip_address, status_='failed with error', error_reason=str(error), error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
+                # except Exception as error:
+                #
+                #     insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
+                #                       executor_name=ip_address, status_='failed with error', error_reason=str(error), error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
+    except Exception as error1:
+        print(f'Main error occured: {error1}')
+        logger.info(f'Main error occured: {error1}')
+        logger.warning(f'Main error occured: {error1}')
 
