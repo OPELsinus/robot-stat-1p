@@ -2,6 +2,7 @@ import datetime
 import os
 import shutil
 import time
+import traceback
 from contextlib import suppress
 from math import floor
 from time import sleep
@@ -13,7 +14,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment
 from pywinauto import keyboard
 
-from config import logger, tg_token, chat_id, db_host, robot_name, db_port, db_name, db_user, db_pass, ip_address, saving_path, download_path, ecp_paths, reports_saving_path, global_username, global_password
+from config import logger, tg_token, chat_id, db_host, robot_name, db_port, db_name, db_user, db_pass, ip_address, saving_path, download_path, ecp_paths, reports_saving_path, global_username, global_password, main_executor, excels_for_stat, executors_excel
 from tools.app import App
 from tools.net_use import net_use
 from tools.web import Web
@@ -34,6 +35,18 @@ def sql_create_table():
             ecp_path text
             )
         '''
+    c = conn.cursor()
+    c.execute(table_create_query)
+
+    conn.commit()
+    c.close()
+    conn.close()
+
+
+def sql_drop_table():
+    conn = psycopg2.connect(host=db_host, port=db_port, database=db_name, user=db_user, password=db_pass)
+    table_create_query = f'''
+        drop TABLE ROBOT.{robot_name.replace("-", "_")}'''
     c = conn.cursor()
     c.execute(table_create_query)
 
@@ -95,7 +108,7 @@ def get_data_to_execute():
     conn = psycopg2.connect(host=db_host, port=db_port, database=db_name, user=db_user, password=db_pass)
     table_create_query = f'''
             SELECT * FROM ROBOT.{robot_name.replace("-", "_")}
-            where (status != 'success' and status != 'processing')
+            where (status != 'success' and status != 'error')
             and (executor_name is NULL or executor_name = '{ip_address}')
             order by started_time desc
             '''
@@ -105,7 +118,7 @@ def get_data_to_execute():
     df1 = pd.DataFrame(cur.fetchall())
 
     with suppress(Exception):
-        df1.columns = ['started_time', 'ended_time', 'full_name', 'executor_name', 'status', 'error_reason', 'error_saved_path', 'execution_time', 'ecp_path']
+        df1.columns = ['started_time', 'ended_time', 'store_name', 'executor_name', 'status', 'error_reason', 'error_saved_path', 'execution_time', 'ecp_path']
 
     cur.close()
     conn.close()
@@ -329,8 +342,15 @@ def save_and_send(web, save):
         if web.wait_element("//span[text() = 'Сохранить отчет и Удалить другие']", timeout=5):
             web.execute_script_click_xpath("//span[text() = 'Сохранить отчет и Удалить другие']")
     print('Clicking Send')
-    errors_count = web.find_elements('//*[@id="statflc"]/ul/li/a')
-    if len(errors_count) <= 1:
+    errors = web.find_elements('//*[@id="statflc"]//a', timeout=15)
+    errors_count = 0
+    for errorik in errors:
+        # print(f"ERRORS IN STAT: {errorik.get_attr('title').lower()}")
+        if 'допустимый' not in errorik.get_attr('title').lower():
+            errors_count += 1
+
+    if errors_count == 0:
+
         print('ALL GOOD')
         web.execute_script_click_xpath("//span[text() = 'Отправить']")
         print('Clicked Send')
@@ -439,7 +459,7 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
         logged_in = web.wait_element("//a[text()='Выйти']", timeout=10)
 
         print('1.44')
-        store = branch.split('\\')[-1]
+        # store = branch.split('\\')[-1]
         print('1.444')
         # sleep(1000)
         if logged_in:
@@ -526,6 +546,11 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                 if found_:
                     web.find_element('//*[@id="createReportId-btnIconEl"]').click()
 
+                sleep(1)
+
+                with suppress(Exception):
+                    web.execute_script_click_xpath("//a//*[text()='Да']")
+
                 if not found_:
                     print('Calendar')
                     web.find_element('//span[contains(text(), "Календарь")]').click()
@@ -537,6 +562,8 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                         print('Here')
                         # web.execute_script_click_xpath('//div[text() = "1-П"]/../following-sibling::td//button/p')
                         web.find_element('//div[text() = "1-П"]/../following-sibling::td//button').click()
+                        with suppress(Exception):
+                            web.execute_script_click_xpath("//a//*[text()='Да']")
 
                     # saved_path = save_screenshot(store)
                     # web.close()
@@ -598,48 +625,56 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                 web.wait_element("//a[contains(text(), 'Страница 1')]", timeout=10)
                 web.find_element("//a[contains(text(), 'Страница 1')]").click()
                 print()
-                id_ = 3
-                for ind, key in enumerate(first.keys()):
+                #
+                #
+                #
+                # С 2024 года по новому заполняем
+                # Это старый код
+                #
+                # id_ = 2
+                # for ind, key in enumerate(first.keys()):
+                #
+                #     if key == 'Всего':
+                #         continue
+                #     if first.get(key) > 0:
+                #         print(key, first.get(key))
+                #         # print(f'//*[@id="{id_}"]/td[3]', f'//*[@id="{id_}_col_1"]')
+                #         web.find_element(f'(//*[@id="2"]/td[2])[1]').click()
+                #         web.find_element(f'//*[@id="{id_}_col_1"]').type_keys(str(key))
+                #
+                #         sleep(1.5)
+                #
+                #         keyboard.send_keys('{ENTER}')
+                #
+                #         # web.find_element(f'//*[@id="{ind + 1}"]/td[3]').click()
+                #         web.find_element(f'//*[@id="{id_}_col_2"]').type_keys(str(first.get(key)))
+                #
+                #         id_ += 1
+                #
+                # keyboard.send_keys('{TAB}')
 
-                    if key == 'Всего':
-                        continue
-                    if first.get(key) > 0:
-                        # print(key, first.get(key))
-                        # print(f'//*[@id="{id_}"]/td[3]', f'//*[@id="{id_}_col_1"]')
-                        web.find_element(f'//*[@id="3"]/td[2]').click()
-
-                        web.find_element(f'//*[@id="{id_}_col_1"]').type_keys(str(key))
-
-                        sleep(1.5)
-
-                        keyboard.send_keys('{ENTER}')
-
-                        # web.find_element(f'//*[@id="{ind + 1}"]/td[3]').click()
-                        web.find_element(f'//*[@id="{id_}_col_2"]').type_keys(str(first.get(key)))
-
-                        id_ += 1
-
-                keyboard.send_keys('{TAB}')
-                # sleep(100)
                 # ? Second page
-                web.wait_element("//a[contains(text(), 'Страница 2')]", timeout=10)
-                web.find_element("//a[contains(text(), 'Страница 2')]").click()
+                web.wait_element("//a[contains(text(), 'Страница 1')]", timeout=10)
+                web.find_element("//a[contains(text(), 'Страница 1')]").click()
 
                 web.find_element('//*[@id="rtime"]').select('2')
                 sleep(1)
                 print('-----')
 
-                id_ = 3
+                id_ = 2
                 for i in range(len(second)):
 
                     cur_key = list(second.keys())[i]
 
                     if cur_key == 'Всего':
                         continue
+                    #
+                    # web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]").click()
+                    # web.wait_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]//input")
+                    # web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]//input").type_keys(cur_key, delay=1)
 
-                    web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]").click()
-                    web.wait_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]//input")
-                    web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][2]//input").type_keys(cur_key, delay=1)
+                    web.find_element(f'(//*[@id="2"]/td[2])[1]').click()
+                    web.find_element(f'//*[@id="{id_}_col_1"]').type_keys(cur_key, delay=1)
                     sleep(1)
                     keyboard.send_keys('{ENTER}')
                     print(cur_key)
@@ -649,21 +684,38 @@ def start_single_branch(filepath, store, values_first_part, values_second_part):
                         if val == 0 and ind >= 2:
                             continue
                         else:
-                            web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]").click(double=True)
-                            print(second.get(cur_key)[ind])
-                            # print(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input")
-                            web.wait_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input")
-                            web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input").type_keys(str(second.get(cur_key)[ind]), delay=1)
+                            # web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]").click(double=True)
+                            # web.wait_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input")
+                            # web.find_element(f"//table[@id='tb_p1_e0']//tr[{id_}]/td[@role='gridcell'][{ind + 4}]//input").type_keys(str(second.get(cur_key)[ind]), delay=1)
+                            if ind < 2:
+                                web.find_element(f'(//*[@id="-{id_}"]/td[{ind + 4}])[1]').click()
+                                web.find_element(f'//*[@id="{id_}_col_{ind + 3}"]').type_keys(str(second.get(cur_key)[ind]), delay=.5)
+                            else:
+                                web.find_element(f'(//*[@id="-{id_}"]/td[{ind + 5}])[1]').click()
+                                web.find_element(f'//*[@id="{id_}_col_{ind + 4}"]').type_keys(str(second.get(cur_key)[ind]), delay=.5)
 
                     id_ += 1
 
                 keyboard.send_keys('{TAB}')
                 # ? Last page
                 web.find_element("//a[contains(text(), 'Данные исполнителя')]").click()
-                web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_0']", value='Естаева Акбота Канатовна')
-                web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_1']", value='7273391350')
-                web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_2']", value='7073882688')
-                web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_3']", value='Yestayeva@magnum.kz')
+
+                df = pd.read_excel(executors_excel)
+
+                executor_name = 'Естаева Акбота Канатовна'
+                phone_number = '7273391350'
+                email = 'Yestayeva@magnum.kz'
+
+                store_ = store.replace('Торговый зал', '').replace('№', '').replace(' ', '')
+                if store_ in list(df['Филиал']):
+                    executor_name = str(df[df['Филиал'] == store_]['ФИО бухгалтера'].iloc[0])
+                    phone_number = str(df[df['Филиал'] == store_]['Сотовый телефон'].iloc[0])
+                    email = str(df[df['Филиал'] == store_]['Электронный адрес'].iloc[0])
+                print(executor_name, phone_number, email)
+                web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_0']", value=executor_name)
+                web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_1']", value=phone_number)
+                web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_2']", value=phone_number)
+                web.execute_script(element_type="value", xpath="//*[@id='inpelem_2_3']", value=email)
 
                 save_and_send(web, save=True)
                 # sleep(3000)
@@ -846,33 +898,57 @@ def get_calculated_dicts(first_, second_):
     return dict1, dict2
 
 
+def dispatcher():
+
+    with suppress(Exception):
+        sql_drop_table()
+
+    sql_create_table()
+
+    for _branch in os.listdir(excels_for_stat):
+
+        if '~' not in _branch:
+
+            _branch_ = _branch.replace('_stat.xlsx', '')
+
+            insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=_branch_,
+                              executor_name=None, status_='new', error_reason='', error_saved_path='', execution_time='', ecp_path_=os.path.join(ecp_paths, _branch_))
+
+
 if __name__ == '__main__':
 
     net_use(ecp_paths, global_username, global_password)
 
     try:
 
-        sql_create_table()
+        if ip_address == main_executor:
+
+            dispatcher()
 
         checked = False
 
-        for branch in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата'):
+        for branch in os.listdir(excels_for_stat):
 
             if '~' not in branch:
+
+                all_data = get_data_to_execute()
+
                 print(branch)
 
                 # if 'АФ №14' in branch or 'АФ №22' in branch or 'АФ №1' in branch or 'АФ №10' in branch or 'АСФ №3' in branch or 'АСФ №1' in branch or 'АСФ №2' in branch or 'АСФ №15' in branch or 'АФ №21' in branch:
                 #     continue
                 branch__ = branch.replace('_stat.xlsx', '')
+
                 found_ = False
-                for reports in os.listdir(r'\\172.16.8.87\d\.rpa\.agent\robot-stat-1p\Отчёты 1П'):
+                for reports in os.listdir(reports_saving_path):
                     if reports.replace('.jpg', '') == branch__:
                         found_ = True
                         break
-                if found_:
+                if found_ or branch__ not in list(all_data['store_name']):
                     continue
-                first = get_first_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
-                second = get_second_page(os.path.join(r'\\172.16.8.87\d\.rpa\.agent\robot-1p\Output\Для стата', branch))
+
+                first = get_first_page(os.path.join(excels_for_stat, branch))
+                second = get_second_page(os.path.join(excels_for_stat, branch))
                 # print(second.keys(), second.get(list(second.keys())[0]))
                 print(first)
                 print(second)
@@ -901,28 +977,35 @@ if __name__ == '__main__':
                 print(s1, s2)
                 # sleep(1000)
                 branch_ = branch.replace('_stat.xlsx', '')
+
                 start_time = time.time()
                 insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
                                   executor_name=ip_address, status_='processing', error_reason='', error_saved_path='', execution_time='', ecp_path_=os.path.join(ecp_paths, branch_))
-                if True:
+
+                try:
                     for tries in range(5):
                         try:
+
                             status, error_saved_path, error = start_single_branch(os.path.join(ecp_paths, branch_), branch_, first, second)
                             # status, error_saved_path, error = 'success', '', ''
                             insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
                                               executor_name=ip_address, status_=status, error_reason=error, error_saved_path=error_saved_path, execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
                             break
                         except Exception as err:
-                            print(f'Single branch error occured: {err}')
+                            traceback.print_exc()
+                            # print(f'Single branch error occured: {err}')
                             logger.info(f'Single branch error occured: {err}')
                             logger.warning(f'Single branch error occured: {err}')
+                            insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
+                                              executor_name=ip_address, status_='failed with error', error_reason=str(err)[:500], error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
-                # except Exception as error:
-                #
-                #     insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
-                #                       executor_name=ip_address, status_='failed with error', error_reason=str(error), error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
+                except Exception as error:
+                    traceback.print_exc()
+                    insert_data_in_db(started_time=datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f"), store_name=branch_,
+                                      executor_name=ip_address, status_='failed with error', error_reason=str(error)[:500], error_saved_path='', execution_time=round(time.time() - start_time), ecp_path_=os.path.join(ecp_paths, branch_))
 
     except Exception as error1:
+        traceback.print_exc()
         print(f'Main error occured: {error1}')
         logger.info(f'Main error occured: {error1}')
         logger.warning(f'Main error occured: {error1}')

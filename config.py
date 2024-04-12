@@ -68,6 +68,9 @@ robot_name = 'robot-stat-1p'
 config_path = global_path.joinpath(f'.agent\\{robot_name}\\config.json')
 config_data = json_read(config_path)
 chat_id = config_data['chat_id']
+main_executor = config_data['main_executor']
+excels_for_stat = config_data['excels_for_stat']
+executors_excel = config_data['executors_excel']
 
 ecp_paths = r'\\vault.magnum.local\common\Stuff\_06_Бухгалтерия\! Актуальные ЭЦП'
 
