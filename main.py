@@ -784,6 +784,7 @@ def get_first_page(filepath):
 
 
 def get_second_page(filepath):
+
     book = load_workbook(filepath, data_only=True)
 
     sheet = book['Стр 4-5']
